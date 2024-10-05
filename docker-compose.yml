@@ -56,7 +56,7 @@ services:
   queue:
     build:
       args:
-        user: brunomelodev
+        user: bruno
         uid: 1000
       context: ./
       dockerfile: Dockerfile
