@@ -1,4 +1,35 @@
 services:
+  # custom image
+  app:
+    build:
+      args:
+        user: bruno
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    image: bruno/laravel-app
+    working_dir: /var/www/
+    volumes:
+      - ./:/var/www/
+    restart: always
+    depends_on:
+      - redis
+      - queue
+    networks:
+      - docker-laravel
+
+  #nginx
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/:/etc/nginx/conf.d/
+    networks:
+      - docker-laravel
+
   # db
   mysql:
     image: mysql:8.0
@@ -8,27 +39,36 @@ services:
     volumes:
       - ./.docker/mysql:/var/lib/mysql
     environment:
-      MYSQL_ROOT_HOST: '%'
-      MYSQL_ALLOW_EMPTY_PASSWORD: 1
-      MYSQL_DATABASE: db
-      MYSQL_ROOT_PASSWORD: 1234
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: 1234
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     networks:
       - docker-laravel
 
-  # phpmyadmin
-  phpmyadmin:
-    image: phpmyadmin
-    restart: always
-    ports:
-      - 8080:80
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
+  # redis
+  redis:
+    image: redis:latest
     networks:
       - docker-laravel
-      
+
+  # queue
+  queue:
+    build:
+      args:
+        user: brunomelodev
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    restart: always
+    command: "php artisan queue:work"
+    volumes:
+      - ./:/var/www
+    depends_on:
+      - redis
+    networks:
+      - docker-laravel
+
 networks:
   docker-laravel:
     driver: bridge
